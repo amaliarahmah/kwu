@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+<p class="small"><a href="/dosen/materi">← Materi</a></p>
+<section class="card narrow-wide">
+  <h1><%= title %></h1>
+  <%- include('../partials/errors') %>
+  <form method="post" action="/dosen/materi<%= material.id ? '/' + material.id : '' %>" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="grid-2">
+      <label>Topik
+        <select name="topic_id" required>
+          <% topics.forEach(t => { %><option value="<%= t.id %>" <%= material.topic_id === t.id ? 'selected' : '' %>><%= t.week_no ? `Minggu ${t.week_no} — ` : '' %><%= t.title %></option><% }) %>
+        </select>
+      </label>
+      <label>Judul materi <input name="title" maxlength="200" value="<%= material.title || '' %>" required></label>
+    </div>
+    <label>Isi materi
+      <textarea name="content" rows="12" placeholder="Ringkasan materi, langkah-langkah, studi kasus, tugas refleksi..."><%= material.content || '' %></textarea>
+    </label>
+    <label>Tautan (opsional)
+      <input type="url" name="link_url" value="<%= material.link_url || '' %>" placeholder="https://www.youtube.com/...">
+    </label>
+    <label>Lampiran (opsional, maks. 10 MB)
+      <input type="file" name="file">
+    </label>
+    <% if (material.id && material.stored_name) { %>
+      <p class="small">Lampiran saat ini: <a href="/unduh/materi/<%= material.id %>"><%= material.original_name %></a> (<%= formatSize(material.size) %>)
+        <label class="inline"><input type="checkbox" name="remove_file" value="1"> hapus lampiran</label></p>
+    <% } %>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Simpan materi</button>
+      <a class="btn" href="/dosen/materi">Batal</a>
+    </div>
+  </form>
+</section>
+<%- include('../partials/footer') %>

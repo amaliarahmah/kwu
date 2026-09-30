@@ -1,0 +1,18 @@
+<%# Parameter: documents, showOwner %>
+<% if (!documents.length) { %><p class="muted">Belum ada dokumen.</p><% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Dokumen</th><th>Kategori</th><% if (showOwner) { %><th>Pengunggah</th><% } %><th>Tanggal</th></tr></thead>
+    <tbody>
+    <% documents.forEach(d => { %>
+      <tr>
+        <td><a href="/unduh/dokumen/<%= d.id %>"><%= d.title %></a><div class="small muted"><%= d.original_name %> · <%= formatSize(d.size) %><%= d.scope === 'kelompok' ? ' · kelompok' : '' %></div></td>
+        <td><%= d.category %></td>
+        <% if (showOwner) { %><td><%= d.owner_name %></td><% } %>
+        <td class="nowrap"><%= formatDate(d.created_at) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>

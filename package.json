@@ -1,0 +1,25 @@
+{
+  "name": "kwu-logbook",
+  "version": "1.0.0",
+  "description": "Aplikasi dokumentasi & pembelajaran kegiatan kewirausahaan mahasiswa",
+  "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning server.js",
+    "dev": "node --no-warnings=ExperimentalWarning --watch server.js",
+    "seed": "node --no-warnings=ExperimentalWarning scripts/seed.js",
+    "create-dosen": "node --no-warnings=ExperimentalWarning scripts/create-dosen.js",
+    "test": "node --no-warnings=ExperimentalWarning --test \"test/**/*.test.js\""
+  },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "multer": "^2.4.0"
+  }
+}

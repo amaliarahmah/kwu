@@ -1,0 +1,37 @@
+<%- include('../partials/header') %>
+<p class="small"><a href="/dosen">← Dashboard</a></p>
+<div class="page-head">
+  <div>
+    <h1>Kelompok <%= group.name %></h1>
+    <p class="muted"><%= group.business_name || 'Nama usaha belum diisi' %> · Pembimbing: <%= group.mentor_name || 'belum ditentukan' %></p>
+    <%- include('../partials/multiline', { text: group.business_desc }) %>
+  </div>
+  <div class="stat compact">
+    <span class="stat-label">Kelengkapan</span>
+    <span class="stat-value"><%= stats.percent === null ? '–' : stats.percent + '%' %></span>
+    <span class="badge level-<%= stats.level.key %>"><%= stats.level.label %></span>
+  </div>
+</div>
+<section class="card">
+  <h2>Log kelompok per minggu</h2>
+  <%- include('../partials/weeks', { weeks: stats.weeks }) %>
+</section>
+<div class="layout-split wide-right">
+  <aside>
+    <section class="card">
+      <h2>Anggota (<%= members.length %>)</h2>
+      <ul class="plain">
+        <% members.forEach(m => { %><li><a href="/dosen/mahasiswa/<%= m.id %>"><%= m.name %></a> <span class="small muted"><%= m.username %></span></li><% }) %>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Dokumen kelompok (<%= documents.length %>)</h2>
+      <%- include('../partials/doc-table', { documents, showOwner: true }) %>
+    </section>
+  </aside>
+  <section>
+    <h2>Log kelompok (<%= logs.length %>)</h2>
+    <%- include('../partials/review-list', { logs, reviewBase: '/dosen/log-kelompok', back: `/dosen/kelompok/${group.id}`, showAuthor: true }) %>
+  </section>
+</div>
+<%- include('../partials/footer') %>

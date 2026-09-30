@@ -1,0 +1,73 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div>
+    <h1>Dokumen</h1>
+    <p class="muted">Unggah proposal, laporan, bukti kegiatan, dan dokumen pendukung lainnya.</p>
+  </div>
+</div>
+<div class="layout-split">
+  <section class="card">
+    <h2>Unggah dokumen</h2>
+    <%- include('../partials/errors') %>
+    <form method="post" action="/mahasiswa/dokumen" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>Judul
+        <input name="title" maxlength="200" value="<%= form.title || '' %>" required placeholder="mis. Proposal Usaha Keripik Singkong">
+      </label>
+      <div class="grid-2">
+        <label>Kategori
+          <select name="category" required>
+            <% categories.forEach(c => { %><option <%= form.category === c ? 'selected' : '' %>><%= c %></option><% }) %>
+          </select>
+        </label>
+        <label>Milik
+          <select name="scope">
+            <option value="pribadi">Pribadi</option>
+            <option value="kelompok" <%= form.scope === 'kelompok' ? 'selected' : '' %> <%= user.group_id ? '' : 'disabled' %>>Kelompok</option>
+          </select>
+        </label>
+      </div>
+      <label>Keterangan (opsional)
+        <textarea name="description" rows="2"><%= form.description || '' %></textarea>
+      </label>
+      <label>File
+        <input type="file" name="file" required>
+      </label>
+      <p class="small muted">Maks. 10 MB. Format: PDF, Word, Excel, PowerPoint, gambar (JPG/PNG/WEBP), TXT, CSV, ZIP, MP4.</p>
+      <button class="btn btn-primary" type="submit">Unggah</button>
+    </form>
+  </section>
+  <section>
+    <h2><%= documents.length %> dokumen</h2>
+    <% if (!documents.length) { %><p class="muted card">Belum ada dokumen.</p><% } else { %>
+    <div class="table-wrap card flush">
+      <table>
+        <thead><tr><th>Dokumen</th><th>Kategori</th><th>Milik</th><th>Diunggah</th><th></th></tr></thead>
+        <tbody>
+        <% documents.forEach(d => { %>
+          <tr>
+            <td>
+              <a href="/unduh/dokumen/<%= d.id %>"><%= d.title %></a>
+              <div class="small muted"><%= d.original_name %> · <%= formatSize(d.size) %></div>
+              <% if (d.description) { %><div class="small"><%= d.description %></div><% } %>
+            </td>
+            <td><%= d.category %></td>
+            <td><%= d.scope === 'kelompok' ? 'Kelompok' : 'Pribadi' %><% if (d.owner_id !== user.id) { %><div class="small muted">oleh <%= d.owner_name %></div><% } %></td>
+            <td class="nowrap"><%= formatDate(d.created_at) %></td>
+            <td>
+              <% if (d.owner_id === user.id) { %>
+              <form method="post" action="/mahasiswa/dokumen/<%= d.id %>/hapus" onsubmit="return confirm('Hapus dokumen ini?')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-small btn-danger" type="submit">Hapus</button>
+              </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </section>
+</div>
+<%- include('../partials/footer') %>

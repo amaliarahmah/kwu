@@ -1,0 +1,156 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div>
+    <h1>Kelola Data</h1>
+    <p class="muted">Kelompok usaha, akun mahasiswa, dan pengaturan periode kegiatan.</p>
+  </div>
+</div>
+
+<% if (credentials) { %>
+<section class="card highlight">
+  <h2>Kata sandi sementara</h2>
+  <p>Bagikan kepada mahasiswa terkait. <strong>Kata sandi ini hanya ditampilkan sekali</strong>; mahasiswa wajib menggantinya saat pertama kali masuk.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>NIM</th><th>Nama</th><th>Kata sandi sementara</th></tr></thead>
+      <tbody><% credentials.forEach(c => { %><tr><td><%= c.username %></td><td><%= c.name %></td><td><code><%= c.password %></code></td></tr><% }) %></tbody>
+    </table>
+  </div>
+  <button class="btn no-print" type="button" onclick="window.print()">Cetak daftar</button>
+</section>
+<% } %>
+
+<section class="card" id="pengaturan">
+  <h2>Pengaturan periode</h2>
+  <form method="post" action="/dosen/pengaturan">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label>Nama program <input name="program_name" maxlength="150" value="<%= settings.program_name %>"></label>
+    <div class="grid-4">
+      <label>Tanggal mulai <input type="date" name="period_start" value="<%= settings.period_start %>" required></label>
+      <label>Jumlah minggu <input type="number" name="period_weeks" min="1" max="52" value="<%= settings.period_weeks %>" required></label>
+      <label>Min. log pribadi / minggu <input type="number" name="min_personal_logs_per_week" min="1" max="14" value="<%= settings.min_personal_logs_per_week %>" required></label>
+      <label>Min. log kelompok / minggu <input type="number" name="min_group_logs_per_week" min="1" max="14" value="<%= settings.min_group_logs_per_week %>" required></label>
+    </div>
+    <button class="btn btn-primary" type="submit">Simpan pengaturan</button>
+  </form>
+</section>
+
+<section class="card" id="kelompok">
+  <h2>Kelompok usaha (<%= groups.length %>)</h2>
+  <form method="post" action="/dosen/kelompok" class="stack">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="grid-3">
+      <label>Nama kelompok <input name="name" maxlength="100" required placeholder="mis. K-01"></label>
+      <label>Nama usaha <input name="business_name" maxlength="200"></label>
+      <label>Dosen pembimbing
+        <select name="mentor_id"><option value="">—</option><% lecturers.forEach(l => { %><option value="<%= l.id %>" <%= l.id === user.id ? 'selected' : '' %>><%= l.name %></option><% }) %></select>
+      </label>
+    </div>
+    <label>Deskripsi usaha <textarea name="business_desc" rows="2"></textarea></label>
+    <button class="btn btn-primary" type="submit">Tambah kelompok</button>
+  </form>
+  <% if (groups.length) { %>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kelompok</th><th>Usaha</th><th>Pembimbing</th><th class="num">Anggota</th><th></th></tr></thead>
+      <tbody>
+      <% groups.forEach(g => { %>
+        <tr>
+          <td><a href="/dosen/kelompok/<%= g.id %>"><%= g.name %></a></td>
+          <td><%= g.business_name || '-' %></td>
+          <td><%= g.mentor_name || '-' %></td>
+          <td class="num"><%= g.member_count %></td>
+          <td>
+            <details>
+              <summary class="small">Ubah</summary>
+              <form method="post" action="/dosen/kelompok/<%= g.id %>" class="stack">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <label>Nama <input name="name" value="<%= g.name %>" required></label>
+                <label>Usaha <input name="business_name" value="<%= g.business_name || '' %>"></label>
+                <label>Deskripsi <textarea name="business_desc" rows="2"><%= g.business_desc || '' %></textarea></label>
+                <label>Pembimbing
+                  <select name="mentor_id"><option value="">—</option><% lecturers.forEach(l => { %><option value="<%= l.id %>" <%= l.id === g.mentor_id ? 'selected' : '' %>><%= l.name %></option><% }) %></select>
+                </label>
+                <button class="btn btn-small btn-primary" type="submit">Simpan</button>
+              </form>
+              <form method="post" action="/dosen/kelompok/<%= g.id %>/hapus" onsubmit="return confirm('Hapus kelompok ini? Log & dokumen kelompok ikut terhapus.')">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-small btn-danger" type="submit">Hapus kelompok</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</section>
+
+<section class="card" id="mahasiswa">
+  <h2>Akun mahasiswa (<%= students.length %>)</h2>
+  <div class="grid-2">
+    <form method="post" action="/dosen/mahasiswa" class="stack">
+      <h3>Tambah satu mahasiswa</h3>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>NIM <input name="username" maxlength="30" required pattern="[A-Za-z0-9._\-]{3,30}"></label>
+      <label>Nama lengkap <input name="name" maxlength="100" required></label>
+      <label>Program studi <input name="prodi" maxlength="100"></label>
+      <label>Kelompok
+        <select name="group_id"><option value="">—</option><% groups.forEach(g => { %><option value="<%= g.id %>"><%= g.name %></option><% }) %></select>
+      </label>
+      <button class="btn btn-primary" type="submit">Tambah</button>
+    </form>
+    <form method="post" action="/dosen/mahasiswa" class="stack">
+      <h3>Impor banyak sekaligus</h3>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label>Satu mahasiswa per baris: <code>NIM;Nama;Kelompok;Prodi</code>
+        <textarea name="bulk" rows="7" placeholder="2301001;Ani Lestari;K-01;Manajemen&#10;2301002;Budi Santoso;K-01;Akuntansi"></textarea>
+      </label>
+      <p class="small muted">Bisa disalin langsung dari Excel (kolom dipisah tab). Kelompok yang belum ada akan dibuat otomatis.</p>
+      <button class="btn btn-primary" type="submit">Impor</button>
+    </form>
+  </div>
+  <% if (students.length) { %>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>NIM</th><th>Nama</th><th>Prodi</th><th>Kelompok</th><th></th></tr></thead>
+      <tbody>
+      <% students.forEach(s => { %>
+        <tr>
+          <td><%= s.username %></td>
+          <td><a href="/dosen/mahasiswa/<%= s.id %>"><%= s.name %></a></td>
+          <td><%= s.prodi || '-' %></td>
+          <td><%= s.group_name || '-' %></td>
+          <td>
+            <details>
+              <summary class="small">Ubah</summary>
+              <form method="post" action="/dosen/mahasiswa/<%= s.id %>" class="stack">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <label>Nama <input name="name" value="<%= s.name %>" required></label>
+                <label>Prodi <input name="prodi" value="<%= s.prodi || '' %>"></label>
+                <label>Kelompok
+                  <select name="group_id"><option value="">—</option><% groups.forEach(g => { %><option value="<%= g.id %>" <%= g.id === s.group_id ? 'selected' : '' %>><%= g.name %></option><% }) %></select>
+                </label>
+                <button class="btn btn-small btn-primary" type="submit">Simpan</button>
+              </form>
+              <div class="actions">
+                <form method="post" action="/dosen/mahasiswa/<%= s.id %>/reset-password" onsubmit="return confirm('Buat kata sandi sementara baru untuk mahasiswa ini?')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small" type="submit">Reset kata sandi</button>
+                </form>
+                <form method="post" action="/dosen/mahasiswa/<%= s.id %>/hapus" onsubmit="return confirm('Hapus akun beserta seluruh log & dokumennya?')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small btn-danger" type="submit">Hapus akun</button>
+                </form>
+              </div>
+            </details>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

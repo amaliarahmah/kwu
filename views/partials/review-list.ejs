@@ -1,0 +1,20 @@
+<%# Daftar log lengkap dengan form pemeriksaan. Parameter: logs, reviewBase, back, showAuthor %>
+<% if (!logs.length) { %><p class="muted card">Belum ada log.</p><% } %>
+<% logs.forEach(log => { %>
+  <article class="log-item">
+    <header>
+      <div>
+        <span class="log-date"><%= formatDate(log.log_date) %></span>
+        <h3><%= log.activity %></h3>
+        <span class="small muted"><%= formatHours(log.duration_hours) %><% if (showAuthor) { %> · oleh <%= log.author_name || '-' %><% } %><% if (log.attendees) { %> · hadir: <%= log.attendees %><% } %></span>
+      </div>
+      <%- include('status', { status: log.status }) %>
+    </header>
+    <%- include('multiline', { text: log.description }) %>
+    <% if (log.outcome) { %><h4>Hasil / pembelajaran</h4><%- include('multiline', { text: log.outcome }) %><% } %>
+    <details <%= log.status === 'menunggu' ? 'open' : '' %>>
+      <summary class="small">Pemeriksaan</summary>
+      <%- include('review-form', { action: `${reviewBase}/${log.id}/review`, log, back }) %>
+    </details>
+  </article>
+<% }) %>

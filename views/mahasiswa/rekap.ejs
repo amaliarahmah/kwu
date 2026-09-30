@@ -1,0 +1,63 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div>
+    <h1>Rekapitulasi Log Kegiatan</h1>
+    <p class="muted"><%= user.name %> (<%= user.username %>)<%= group ? ` · Kelompok ${group.name}` : '' %> · <%= settings.program_name %></p>
+  </div>
+  <div class="actions no-print">
+    <button class="btn" type="button" onclick="window.print()">Cetak / PDF</button>
+    <a class="btn" href="/mahasiswa/rekap.csv">Unduh CSV</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="stat-label">Log pribadi</span><span class="stat-value"><%= logs.length %></span>
+    <span class="small muted"><%= summary.personalApproved %> disetujui · <%= summary.personalRevision %> revisi</span></div>
+  <div class="stat"><span class="stat-label">Jam kegiatan pribadi</span><span class="stat-value"><%= formatHours(summary.personalHours) %></span></div>
+  <div class="stat"><span class="stat-label">Log kelompok</span><span class="stat-value"><%= groupLogs.length %></span>
+    <span class="small muted"><%= summary.groupApproved %> disetujui</span></div>
+  <div class="stat"><span class="stat-label">Dokumen</span><span class="stat-value"><%= summary.documents %></span></div>
+</div>
+
+<section class="card">
+  <h2>Kelengkapan per minggu</h2>
+  <p class="small muted">
+    Kelengkapan dihitung dari minggu yang sudah selesai (<%= personal.completedWeeks %> dari <%= settings.period_weeks %> minggu).
+    Log pribadi: <strong><%= personal.percent === null ? '–' : personal.percent + '%' %></strong>
+    <% if (groupStats) { %>· Log kelompok: <strong><%= groupStats.percent === null ? '–' : groupStats.percent + '%' %></strong><% } %>
+    <% if (personal.outsidePeriod) { %>· <%= personal.outsidePeriod %> log pribadi di luar periode tidak dihitung<% } %>
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Minggu</th><th>Tanggal</th><th class="num">Log pribadi</th><th>Status</th><% if (groupStats) { %><th class="num">Log kelompok</th><th>Status</th><% } %></tr></thead>
+      <tbody>
+      <% const stateLabel = { terpenuhi: 'Terpenuhi', kurang: 'Kurang', berjalan: 'Berjalan', 'akan-datang': '–' }; %>
+      <% weeks.forEach(w => { %>
+        <tr>
+          <td><%= w.no %></td>
+          <td class="nowrap"><%= formatDate(w.start) %> – <%= formatDate(w.end) %></td>
+          <td class="num"><%= w.count %></td>
+          <td><span class="badge week-badge-<%= w.state %>"><%= stateLabel[w.state] %></span></td>
+          <% if (groupStats) { %>
+            <td class="num"><%= w.groupCount %></td>
+            <td><span class="badge week-badge-<%= w.groupState %>"><%= stateLabel[w.groupState] %></span></td>
+          <% } %>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Daftar log pribadi</h2>
+  <%- include('../partials/log-table', { rows: logs, showAuthor: false }) %>
+</section>
+<% if (group) { %>
+<section class="card">
+  <h2>Daftar log kelompok</h2>
+  <%- include('../partials/log-table', { rows: groupLogs, showAuthor: true }) %>
+</section>
+<% } %>
+<p class="print-only small">Dicetak dari Logbook KWU.</p>
+<%- include('../partials/footer') %>

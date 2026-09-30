@@ -1,6 +1,7 @@
 -- =====================================================================
 -- Logbook KWU — skema database Supabase
--- Jalankan SEKALI di Supabase: Dashboard → SQL Editor → New query → tempel seluruh isi file ini → Run.
+-- Jalankan di Supabase: Dashboard → SQL Editor → New query → tempel seluruh isi file ini → Run.
+-- Aman dijalankan ulang (misalnya bila percobaan pertama gagal di tengah jalan); data yang sudah ada tidak dihapus.
 -- Keamanan data dijaga oleh Row Level Security (RLS): setiap baris hanya bisa dibaca/diubah
 -- oleh pengguna yang berhak, walaupun kunci "anon" aplikasi bersifat publik.
 -- =====================================================================
@@ -11,7 +12,7 @@ create extension if not exists pgcrypto with schema extensions;
 -- Tabel
 -- ---------------------------------------------------------------------
 
-create table public.settings (
+create table if not exists public.settings (
   id                         int primary key default 1 check (id = 1),
   program_name               text not null default 'Program Kewirausahaan Mahasiswa' check (length(program_name) <= 150),
   period_start               date not null default current_date,
@@ -19,9 +20,9 @@ create table public.settings (
   min_personal_logs_per_week int  not null default 1 check (min_personal_logs_per_week between 1 and 14),
   min_group_logs_per_week    int  not null default 1 check (min_group_logs_per_week between 1 and 14)
 );
-insert into public.settings default values;
+insert into public.settings default values on conflict (id) do nothing;
 
-create table public.groups (
+create table if not exists public.groups (
   id            bigint generated always as identity primary key,
   name          text not null unique check (length(name) between 1 and 100),
   business_name text check (length(business_name) <= 200),
@@ -31,7 +32,7 @@ create table public.groups (
 );
 
 -- Satu baris per akun yang sudah aktif (terhubung ke auth.users).
-create table public.profiles (
+create table if not exists public.profiles (
   id                   uuid primary key references auth.users (id) on delete cascade,
   nim                  text not null unique,
   name                 text not null check (length(name) between 1 and 100),
@@ -41,8 +42,13 @@ create table public.profiles (
   must_change_password boolean not null default false,
   created_at           timestamptz not null default now()
 );
-alter table public.groups
-  add constraint groups_mentor_id_fkey foreign key (mentor_id) references public.profiles (id) on delete set null;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'groups_mentor_id_fkey') then
+    alter table public.groups
+      add constraint groups_mentor_id_fkey foreign key (mentor_id) references public.profiles (id) on delete set null;
+  end if;
+end $$;
 
 -- Daftar peserta yang boleh mendaftar. Dosen mengisi daftar ini; mahasiswa mengaktifkan akun
 -- dengan NIM + kode aktivasi. Kode dihapus setelah dipakai.
@@ -52,7 +58,7 @@ language sql volatile security definer set search_path = '' as $$
     from (select extensions.gen_random_bytes(8) as b) r, generate_series(0, 7) as i;
 $$;
 
-create table public.roster (
+create table if not exists public.roster (
   nim             text primary key check (nim ~ '^[A-Za-z0-9._-]{3,30}$'),
   name            text not null check (length(name) between 1 and 100),
   role            text not null default 'mahasiswa' check (role in ('mahasiswa', 'dosen')),
@@ -64,7 +70,7 @@ create table public.roster (
   created_at      timestamptz not null default now()
 );
 
-create table public.personal_logs (
+create table if not exists public.personal_logs (
   id             bigint generated always as identity primary key,
   user_id        uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   log_date       date not null,
@@ -77,9 +83,9 @@ create table public.personal_logs (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
-create index personal_logs_user_idx on public.personal_logs (user_id, log_date);
+create index if not exists personal_logs_user_idx on public.personal_logs (user_id, log_date);
 
-create table public.group_logs (
+create table if not exists public.group_logs (
   id             bigint generated always as identity primary key,
   group_id       bigint not null references public.groups (id) on delete cascade,
   author_id      uuid default auth.uid() references public.profiles (id) on delete set null,
@@ -94,10 +100,10 @@ create table public.group_logs (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
-create index group_logs_group_idx on public.group_logs (group_id, log_date);
+create index if not exists group_logs_group_idx on public.group_logs (group_id, log_date);
 
 -- Dokumen disimpan sebagai tautan (Google Drive, OneDrive, dll.), bukan file.
-create table public.documents (
+create table if not exists public.documents (
   id          bigint generated always as identity primary key,
   owner_id    uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   group_id    bigint references public.groups (id) on delete cascade,
@@ -110,7 +116,7 @@ create table public.documents (
   check ((scope = 'pribadi' and group_id is null) or (scope = 'kelompok' and group_id is not null))
 );
 
-create table public.topics (
+create table if not exists public.topics (
   id          bigint generated always as identity primary key,
   title       text not null check (length(title) between 1 and 200),
   description text check (length(description) <= 3000),
@@ -118,7 +124,7 @@ create table public.topics (
   created_at  timestamptz not null default now()
 );
 
-create table public.materials (
+create table if not exists public.materials (
   id             bigint generated always as identity primary key,
   topic_id       bigint not null references public.topics (id) on delete cascade,
   title          text not null check (length(title) between 1 and 200),
@@ -129,7 +135,7 @@ create table public.materials (
   check (coalesce(content, '') <> '' or link_url is not null or attachment_url is not null)
 );
 
-create table public.material_progress (
+create table if not exists public.material_progress (
   user_id      uuid not null default auth.uid() references public.profiles (id) on delete cascade,
   material_id  bigint not null references public.materials (id) on delete cascade,
   completed_at timestamptz not null default now(),
@@ -172,9 +178,15 @@ begin
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Trigger di auth.users hanya dibuat bila belum ada (peran SQL Editor tidak boleh menghapusnya).
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created' and tgrelid = 'auth.users'::regclass) then
+    create trigger on_auth_user_created
+      after insert on auth.users
+      for each row execute function public.handle_new_user();
+  end if;
+end $$;
 
 -- Dipakai halaman aktivasi untuk memeriksa NIM + kode sebelum mendaftar. Mengembalikan nama bila valid.
 create or replace function public.check_activation(p_nim text, p_code text) returns text
@@ -211,6 +223,7 @@ begin
 end;
 $$;
 
+drop trigger if exists personal_logs_guard on public.personal_logs;
 create trigger personal_logs_guard
   before insert or update on public.personal_logs
   for each row execute function public.guard_personal_log();
@@ -238,6 +251,7 @@ begin
 end;
 $$;
 
+drop trigger if exists group_logs_guard on public.group_logs;
 create trigger group_logs_guard
   before insert or update on public.group_logs
   for each row execute function public.guard_group_log();
@@ -337,6 +351,21 @@ $$;
 -- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
+
+-- Hapus aturan lama (bila skrip dijalankan ulang) agar bisa dibuat ulang tanpa error.
+do $$
+declare
+  p record;
+begin
+  for p in
+    select policyname, tablename from pg_policies
+     where schemaname = 'public'
+       and tablename in ('settings', 'groups', 'profiles', 'roster', 'personal_logs', 'group_logs',
+                         'documents', 'topics', 'materials', 'material_progress')
+  loop
+    execute format('drop policy %I on public.%I', p.policyname, p.tablename);
+  end loop;
+end $$;
 
 alter table public.settings          enable row level security;
 alter table public.groups            enable row level security;

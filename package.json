@@ -1,25 +1,17 @@
 {
   "name": "kwu-logbook",
-  "version": "1.0.0",
-  "description": "Aplikasi dokumentasi & pembelajaran kegiatan kewirausahaan mahasiswa",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Logbook KWU — aplikasi statis (GitHub Pages) + Supabase untuk dokumentasi dan pembelajaran kewirausahaan mahasiswa",
   "private": true,
-  "engines": {
-    "node": ">=22.13"
-  },
+  "type": "module",
   "scripts": {
-    "start": "node --no-warnings=ExperimentalWarning server.js",
-    "dev": "node --no-warnings=ExperimentalWarning --watch server.js",
-    "seed": "node --no-warnings=ExperimentalWarning scripts/seed.js",
-    "create-dosen": "node --no-warnings=ExperimentalWarning scripts/create-dosen.js",
-    "test": "node --no-warnings=ExperimentalWarning --test \"test/**/*.test.js\""
+    "test": "node --test \"tests/unit/*.test.js\"",
+    "local": "bash tests/local-supabase/start.sh",
+    "test:e2e": "node --test --test-concurrency=1 \"tests/e2e/*.test.js\""
   },
-  "license": "MIT",
-  "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "ejs": "^6.0.1",
-    "express": "^5.2.1",
-    "express-session": "^1.19.0",
-    "multer": "^2.4.0"
-  }
+  "devDependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "playwright": "1.56.1"
+  },
+  "license": "MIT"
 }
